@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>European Big Data Map</title>
+
+  <link rel="stylesheet" href="vendor/leaflet/0.4.4/leaflet.css">
+  <!--[if lte IE 8]>
+  <link rel="stylesheet" href="vendor/leaflet/0.4.4/leaflet.ie.css" />
+  <![endif]-->
+  <link rel="stylesheet" href="vendor/leaflet.markercluster/MarkerCluster.css">
+  <link rel="stylesheet" href="vendor/leaflet.markercluster/MarkerCluster.Default.css">
+  <link rel="stylesheet" href="dist/recline.css">
+  <!--[if lte IE 8]>
+  <link rel="stylesheet" href="vendor/leaflet.markercluster/MarkerCluster.Default.ie.css" />
+  <![endif]-->
+  <script type="text/javascript" src="vendor/leaflet/0.4.4/leaflet.js"></script>
+  <script type="text/javascript" src="vendor/leaflet.markercluster/leaflet.markercluster.js"></script>
+  <script type="text/javascript" src="vendor/jquery/1.7.1/jquery.js"></script>
+  <script type="text/javascript" src="vendor/underscore/1.4.4/underscore.js"></script>
+  <script type="text/javascript" src="vendor/backbone/1.0.0/backbone.js"></script>
+  <script type="text/javascript" src="vendor/mustache/0.5.0-dev/mustache.js"></script>
+  <script type="text/javascript" src="dist/backend.gdocs.js"></script>
+  <script type="text/javascript" src="dist/recline.js"></script>
+</head>
+<body>
+<div id="map"></div>
+<label>Categories: <select id="categories">
+  <option value="">---</option>
+</select>
+</label>
+
+<script type="text/javascript">
+  $(function(){
+    var dataset = new recline.Model.Dataset({
+      url: '0As2ywI3daTRTdGdJWTUwYzNGYUxkM0ZxSFRQeUpiV1E',
+      worksheetIndex: 3,
+      backend: 'gdocs'
+    });
+    // var dataset = new recline.Model.Dataset({
+    //   url: 'https://docs.google.com/spreadsheet/ccc?key=0Aon3JiuouxLUdGZPaUZsMjBxeGhfOWRlWm85MmV0UUE#gid=0',
+    //   backend: 'gdocs'
+    // });
+    dataset.fetch().done(function(dataset) {
+      var categories = {};
+      dataset.records.each(function(record) {
+        var category = record.get('category');
+        if (category) {
+          var cats = category.split(',');
+          for (var i = 0; i<cats.length; i += 1) {
+            categories[cats[i]] = true;
+          }
+        }
+      });
+      for (var cat in categories) {
+        $('#categories').append('<option value="'+ cat +'">' + cat + '</option>');
+      }
+
+      $('#categories').on('change', function(e){
+        var val = $(this).val();
+        if (val === '') {
+          createMap(dataset);
+          return;
+        }
+        var filtered = dataset.records.filter(function(record) {
+          return record.get('category').indexOf(val) !== -1;
+        });
+
+        var filteredDataset = new recline.Model.Dataset({
+          records: _.map(filtered, function(x){ return x.toJSON(); })
+        });
+        createMap(filteredDataset);
+      })
+
+      var $el = $('#map');
+
+      var createMap = function(recs){
+        var map = new recline.View.Map({
+          model: recs
+        });
+        $el.html(map.el);
+        map.infobox = function(record) {
+          var html = '<h3><a href="' +record.get('url') +'">' + record.get('name') + '</a></h3>'
+          html += '<p>'+record.get('city') + ', '+record.get('countrycode')+'</p>';
+          return html;
+        }
+        map.render();
+      };
+      createMap(dataset);
+    });
+  });
+</script>
+</body>
+</html>
