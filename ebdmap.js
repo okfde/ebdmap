@@ -1,46 +1,70 @@
 $(function(){
   var dataset = new recline.Model.Dataset({
     url: '0As2ywI3daTRTdGdJWTUwYzNGYUxkM0ZxSFRQeUpiV1E',
-    worksheetIndex: 3,
+    worksheetIndex: 1,
     backend: 'gdocs'
   });
-  // var dataset = new recline.Model.Dataset({
-  //   url: 'https://docs.google.com/spreadsheet/ccc?key=0Aon3JiuouxLUdGZPaUZsMjBxeGhfOWRlWm85MmV0UUE#gid=0',
-  //   backend: 'gdocs'
-  // });
+  var filters = [
+    {
+      id: 'categories',
+      label: 'Categories',
+      column: 'category',
+      values: ['individual', 'startup', 'small company', 'big company']
+    },
+    {
+      id: 'technicalarea',
+      label: 'Technical Area',
+      column: 'technicalarea',
+      values: ['Data Acquisition','Data Analysis','Data Curation','Data Storage','Data Usage']
+    },
+    {
+      id: 'industrialsector',
+      label: 'Industrial Sector',
+      column: 'industrialsector',
+      values: ['Finance & Insurance Sectors','Health Sector','Manufacturing, Retail, Energy & Transport Sectors','Public Sector','Telco, Media & Entertainment Sectors']
+    },
+    {
+      id: 'country',
+      label: 'Country',
+      column: 'country'
+    }
+  ];
+
   dataset.fetch().done(function(allDataset) {
-    var categories = {};
-    allDataset.records.each(function(record) {
-      var category = record.get('category');
-      if (category) {
-        var cats = category.split(',');
-        for (var i = 0; i<cats.length; i += 1) {
-          categories[cats[i]] = true;
-        }
+    _.each(filters, function(filter){
+      if (filter.values === undefined) {
+        filter.values = _.uniq(allDataset.records.pluck('country'));
       }
     });
-    for (var cat in categories) {
-      $('#categories').append('<option value="'+ cat +'">' + cat + '</option>');
-    }
+    _.each(filters, function(filter){
+      _.each(filter.values, function(value){
+        $('#' + filter.id).append('<option value="'+ value +'">' + value + '</option>');
+      })
+    });
 
     var dataset = new recline.Model.Dataset({
       records: allDataset.records.map(function(x){ return x.toJSON();})
     });
+    console.log(dataset.records)
 
-
-    $('#categories').on('change', function(e){
-      var val = $(this).val();
-      if (val === '') {
-        dataset.records.reset(allDataset.records.map(
-          function(x){ return x.toJSON(); }));
-        return;
-      }
-      var filtered = allDataset.records.filter(function(record) {
-        return record.get('category').indexOf(val) !== -1;
+    var applyFilter = function(){
+      dataset.records.reset(allDataset.records.map(function(x){ return x.toJSON(); }));
+      var filteredRecords = dataset.records.models;
+      _.each(filters, function(filter){
+        var val = $('#'+filter.id).val();
+        if (val === '') { return; }
+        filteredRecords = filteredRecords.filter(function(record) {
+          return record.get(filter.column).indexOf(val) !== -1;
+        });
       });
+      dataset.records.reset(_.map(filteredRecords, function(x){
+        return x.toJSON();
+      }));
+    };
 
-      dataset.records.reset(_.map(filtered, function(x){ return x.toJSON();}));
-    });
+    _.each(filters, function(filter){
+      $('#' + filter.id).on('change', applyFilter);
+    })
 
     var $el = $('#map');
 
@@ -49,8 +73,10 @@ $(function(){
     });
     $el.html(map.el);
     map.infobox = function(record) {
-      var html = '<h3><a href="' +record.get('url') +'">' + record.get('name') + '</a></h3>'
-      html += '<p>'+record.get('city') + ', '+record.get('countrycode')+'</p>';
+      var html = '<h3><a href="' +record.get('url') +'">' + record.get('companyname') + '</a></h3>'
+      html += '<p>'+record.get('city') + ', '+record.get('countrycode')+'<br/>';
+      html += 'Technical Area: '+record.get('technicalarea') + '<br/>';
+      html += 'Industry Sector: '+record.get('industrysector') + '</p>';
       return html;
     }
     map.render();
