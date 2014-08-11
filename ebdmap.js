@@ -45,7 +45,6 @@ $(function(){
     var dataset = new recline.Model.Dataset({
       records: allDataset.records.map(function(x){ return x.toJSON();})
     });
-    console.log(dataset.records)
 
     var applyFilter = function(){
       dataset.records.reset(allDataset.records.map(function(x){ return x.toJSON(); }));
@@ -73,7 +72,7 @@ $(function(){
     });
     $el.html(map.el);
     map.infobox = function(record) {
-      var html = '<h3><a href="' +record.get('url') +'">' + record.get('companyname') + '</a></h3>'
+      var html = '<h3><a target="_blank" href="' +record.get('url') +'">' + record.get('companyname') + '</a></h3>'
       html += '<p>'+record.get('city') + ', '+record.get('countrycode')+'<br/>';
       html += 'Technical Area: '+record.get('technicalarea') + '<br/>';
       html += 'Industry Sector: '+record.get('industrysector') + '</p>';
